@@ -226,45 +226,48 @@
         @endif
 
         @yield('content')
-    </main>
 
-    <!-- Footer - Hide on profile page -->
-    @if(!Request::is('profile'))
-    <footer class="footer">
+    <!-- Footer - Hide on specific pages -->
+    @if(!Request::is('profile') && !Request::is('/') && !Request::is('client/tokens*') && !Request::is('client/catalog*') && !Request::is('client/orders*') && !Request::is('liste-cadeaux*'))
+    <footer class="bg-dark text-white py-4 mt-5">
         <div class="container">
             <div class="row">
-                <div class="col-md-4 mb-4">
+                <div class="col-md-4 mb-4 mb-md-0">
                     <h5>LivresGourmands</h5>
-                    <p>La référence en livres de cuisine pour tous les amateurs de gastronomie.</p>
+                    <p class="text-muted">Votre destination pour les livres de cuisine et de gastronomie.</p>
+                    <div class="social-icons">
+                        <a href="#" class="me-2"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" class="me-2"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="me-2"><i class="fab fa-instagram"></i></a>
+                    </div>
                 </div>
-                <div class="col-md-4 mb-4">
-                    <h5>Liens utiles</h5>
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h5>Liens rapides</h5>
                     <ul class="list-unstyled">
-                        <li><a href="{{ route('client.catalog') }}">Catalogue</a></li>
-                        <li><a href="{{ route('client.orders') }}">Mes commandes</a></li>
-                        <li><a href="{{ route('client.cart.index') }}">Mon panier</a></li>
+                        <li><a href="{{ route('client.catalog') }}" class="text-decoration-none text-white">Catalogue</a></li>
+                        <li><a href="{{ route('client.orders') }}" class="text-decoration-none text-white">Mes commandes</a></li>
+                        <li><a href="{{ route('profile.show') }}" class="text-decoration-none text-white">Mon compte</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4">
                     <h5>Contact</h5>
-                    <ul class="list-unstyled">
-                        <li><i class="fas fa-envelope me-2"></i> contact@livresgourmands.net</li>
-                        <li><i class="fas fa-phone me-2"></i> +33 (0)1 23 45 67 89</li>
-                        <li><i class="fas fa-map-marker-alt me-2"></i> 123 Avenue de la Gastronomie, Paris</li>
-                    </ul>
+                    <address class="text-muted">
+                        123 Rue de la Cuisine<br>
+                        75000 Paris, France<br>
+                        <i class="fas fa-envelope me-2"></i>contact@livresgourmands.net<br>
+                        <i class="fas fa-phone me-2"></i>+33 1 23 45 67 89
+                    </address>
                 </div>
             </div>
-            <hr>
-            <div class="row">
-                <div class="col-12 text-center">
-                    <p class="mb-0">&copy; {{ date('Y') }} LivresGourmands. Tous droits réservés.</p>
-                </div>
+            <hr class="mt-4 mb-3">
+            <div class="text-center">
+                <p class="mb-0">&copy; {{ date('Y') }} LivresGourmands. Tous droits réservés.</p>
             </div>
         </div>
     </footer>
     @endif
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- Apply theme changes immediately when selected -->

@@ -34,29 +34,31 @@ class ClientController extends Controller
      */
     public function catalog(Request $request)
     {
-        $query = Book::with('category')->where('stock', '>', 0);
+        // Construire la requête pour les livres
+        $query = Book::query();
         
-        // Filtrage par catégorie
-        if ($request->has('category')) {
-            $query->where('categorie_id', $request->category);
-        }
-        
-        // Filtrage par niveau d'expertise
-        if ($request->has('level')) {
-            $query->where('niveau_expertise', $request->level);
-        }
-        
-        // Recherche par titre ou auteur
-        if ($request->has('search')) {
+        // Filtre de recherche
+        if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('titre', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
                   ->orWhere('auteur', 'like', "%{$search}%");
             });
         }
         
+        // Filtre par catégorie
+        if ($request->has('category') && !empty($request->category)) {
+            $query->where('categorie_id', $request->category);
+        }
+        
+        // Filtre par niveau d'expertise
+        if ($request->has('expertise') && !empty($request->expertise)) {
+            $query->where('niveau_expertise', $request->expertise);
+        }
+        
         // Tri
-        if ($request->has('sort')) {
+        if ($request->has('sort') && !empty($request->sort)) {
             switch ($request->sort) {
                 case 'price_asc':
                     $query->orderBy('prix', 'asc');
@@ -67,18 +69,18 @@ class ClientController extends Controller
                 case 'title':
                     $query->orderBy('titre', 'asc');
                     break;
-                case 'newest':
-                    $query->orderBy('created_at', 'desc');
-                    break;
-                default:
+                default: // newest
                     $query->orderBy('created_at', 'desc');
             }
         } else {
-            $query->orderBy('created_at', 'desc');
+            $query->orderBy('created_at', 'desc'); // Par défaut: les plus récents
         }
         
-        $books = $query->paginate(12);
-        $categories = Category::all();
+        // Pagination - Modifier pour afficher exactement 6 livres par page
+        $books = $query->paginate(6)->withQueryString();
+        
+        // Récupérer toutes les catégories pour les filtres
+        $categories = Category::orderBy('nom')->get();
         
         return view('client.catalog', compact('books', 'categories'));
     }
@@ -134,36 +136,27 @@ class ClientController extends Controller
     }
 
     /**
-     * Afficher le formulaire pour confirmer l'adresse de livraison
+     * Show the form for confirming shipping address
      */
     public function confirmAddressForm(Order $order)
     {
-        // Vérifier que l'utilisateur est bien le propriétaire de la commande
+        // Check if the order belongs to the authenticated user
         if ($order->user_id !== Auth::id()) {
             return redirect()->route('client.orders')
-                ->with('error', 'Vous n\'avez pas accès à cette commande');
+                ->with('error', 'Vous n\'êtes pas autorisé à consulter cette commande.');
         }
-        
-        // Vérifier que l'adresse n'a pas déjà été confirmée
-        if ($order->address_confirmed) {
-            return redirect()->route('client.orders.details', $order)
-                ->with('info', 'L\'adresse a déjà été confirmée');
-        }
-        
-        return view('client.confirm-address', compact('order'));
+
+        // Check if the address already exists
+        $address = $order->shippingAddress;
+
+        return view('client.confirm-address', compact('order', 'address'));
     }
 
     /**
-     * Confirmer l'adresse de livraison
+     * Store shipping address for an order
      */
     public function confirmAddress(Request $request, Order $order)
     {
-        // Vérifier que l'utilisateur est bien le propriétaire de la commande
-        if ($order->user_id !== Auth::id()) {
-            return redirect()->route('client.orders')
-                ->with('error', 'Vous n\'avez pas accès à cette commande');
-        }
-        
         $validated = $request->validate([
             'street' => 'required|string|max:255',
             'city' => 'required|string|max:255',
@@ -171,21 +164,34 @@ class ClientController extends Controller
             'country' => 'required|string|max:255',
         ]);
         
-        // Mettre à jour ou créer l'adresse
-        if ($order->address) {
-            $order->address->update($validated);
-        } else {
-            $address = new ShippingAddress($validated);
-            $address->order_id = $order->id;
-            $address->save();
+        // Check if the order belongs to the authenticated user
+        if ($order->user_id !== Auth::id()) {
+            return redirect()->route('client.orders')
+                ->with('error', 'Vous n\'êtes pas autorisé à consulter cette commande.');
         }
         
-        // Marquer l'adresse comme confirmée
-        $order->address_confirmed = true;
-        $order->save();
-        
-        return redirect()->route('client.orders.details', $order)
-            ->with('success', 'Adresse de livraison confirmée avec succès');
+        try {
+            // Create or update shipping address with all fields explicitly included
+            $shippingAddress = $order->shippingAddress()->updateOrCreate(
+                ['order_id' => $order->id],
+                [
+                    'street' => $validated['street'],
+                    'city' => $validated['city'],
+                    'postal_code' => $validated['postal_code'],
+                    'country' => $validated['country'],
+                ]
+            );
+            
+            // Update order flag
+            $order->address_confirmed = true;
+            $order->save();
+            
+            return redirect()->route('client.orders.details', $order)
+                ->with('success', 'Adresse de livraison confirmée avec succès.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->with('error', 'Erreur lors de la confirmation de l\'adresse: ' . $e->getMessage());
+        }
     }
 
     /**

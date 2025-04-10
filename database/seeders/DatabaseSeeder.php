@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             BookSeeder::class,
             CommentSeeder::class,
             SaleSeeder::class,
+            UpdateBookImagesSeeder::class,
         ]);
     }
 }
