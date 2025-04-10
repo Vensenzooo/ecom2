@@ -208,7 +208,32 @@
                         <i class="fas fa-user-tag"></i> Rôles
                     </a>
                 </li>
+                <!-- Refund Management Section -->
+                <div class="sidebar-section">
+                    <h6 class="sidebar-heading">Remboursements</h6>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->routeIs('admin.refunds.*') ? 'active' : '' }}" href="{{ route('admin.refunds.index') }}">
+                                <i class="fas fa-exchange-alt me-2"></i>
+                                Demandes de remboursement
+                                @php
+                                    $pendingRefundsCount = App\Models\Order::where('statut', 'refund_requested')->count();
+                                @endphp
+                                @if($pendingRefundsCount > 0)
+                                    <span class="badge bg-danger ms-2">{{ $pendingRefundsCount }}</span>
+                                @endif
+                            </a>
+                        </li>
+                    </ul>
+                </div>
                 @endcan
+                
+                <!-- Nouveau lien pour accéder à la version client -->
+                <li class="mt-4">
+                    <a href="{{ route('client.dashboard') }}" class="bg-success bg-opacity-25 text-white">
+                        <i class="fas fa-user me-1"></i> Version client
+                    </a>
+                </li>
             </ul>
 
             <ul class="list-unstyled">
@@ -235,18 +260,23 @@
                         <!-- Affichage des alertes -->
                         <div class="dropdown me-3">
                             <a href="#" class="nav-link position-relative" id="alertsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-bell"></i>
+                                <i class="fas fa-bell fa-lg"></i>
                                 @if(Auth::user()->hasUnreadAlerts())
                                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
                                         {{ Auth::user()->unreadAlertsCount() }}
-                                        <span class="visually-hidden">Alertes non lues</span>
                                     </span>
                                 @endif
                             </a>
-                            <div class="dropdown-menu dropdown-menu-end" aria-labelledby="alertsDropdown" style="width: 300px;">
+                            <div class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="alertsDropdown" style="width: 320px; max-height: 400px; overflow-y: auto;">
                                 <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
-                                    <h6 class="mb-0">Notifications</h6>
-                                    <a href="{{ route('alerts.index') }}" class="text-decoration-none">Voir tout</a>
+                                    <h6 class="mb-0 fw-bold">Notifications</h6>
+                                    @php
+                                        $isAdmin = Auth::user()->roles()->where('nom', 'admin')->exists();
+                                        $isEditor = Auth::user()->roles()->where('nom', 'editeur')->exists();
+                                        $isManager = Auth::user()->roles()->where('nom', 'gestionnaire')->exists();
+                                        $alertsRoute = ($isAdmin || $isEditor || $isManager) ? route('alerts.index') : route('client.alerts.index');
+                                    @endphp
+                                    <a href="{{ $alertsRoute }}" class="text-decoration-none">Voir tout</a>
                                 </div>
                                 
                                 @php
@@ -254,39 +284,59 @@
                                 @endphp
                                 
                                 @if($alerts->isEmpty())
-                                    <div class="dropdown-item text-center text-muted py-3">
-                                        <i class="fas fa-bell-slash me-2"></i>Aucune notification
+                                    <div class="p-4 text-center text-muted">
+                                        <i class="fas fa-bell-slash fa-2x mb-3"></i>
+                                        <p class="mb-0">Aucune notification</p>
                                     </div>
                                 @else
-                                    @foreach($alerts as $alert)
-                                        <div class="dropdown-item d-flex {{ is_null($alert->read_at) ? 'bg-light' : '' }}">
-                                            <div class="me-2">
-                                                @if($alert->type == 'danger')
-                                                    <i class="fas fa-exclamation-circle text-danger"></i>
-                                                @elseif($alert->type == 'warning')
-                                                    <i class="fas fa-exclamation-triangle text-warning"></i>
-                                                @else
-                                                    <i class="fas fa-info-circle text-info"></i>
-                                                @endif
+                                    <div class="notifications-container">
+                                        @foreach($alerts as $alert)
+                                            <div class="dropdown-item p-3 {{ is_null($alert->read_at) ? 'bg-light' : '' }} border-bottom">
+                                                <div class="d-flex align-items-start">
+                                                    <div class="me-3">
+                                                        @if($alert->type == 'danger')
+                                                            <span class="fa-stack">
+                                                                <i class="fas fa-circle fa-stack-2x text-danger"></i>
+                                                                <i class="fas fa-exclamation fa-stack-1x text-white"></i>
+                                                            </span>
+                                                        @elseif($alert->type == 'warning')
+                                                            <span class="fa-stack">
+                                                                <i class="fas fa-circle fa-stack-2x text-warning"></i>
+                                                                <i class="fas fa-exclamation-triangle fa-stack-1x text-white"></i>
+                                                            </span>
+                                                        @else
+                                                            <span class="fa-stack">
+                                                                <i class="fas fa-circle fa-stack-2x text-info"></i>
+                                                                <i class="fas fa-info fa-stack-1x text-white"></i>
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <p class="mb-1 {{ is_null($alert->read_at) ? 'fw-bold' : '' }}">
+                                                            {{ Str::limit($alert->message, 100) }}
+                                                        </p>
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <small class="text-muted">{{ $alert->created_at->diffForHumans() }}</small>
+                                                            @if(is_null($alert->read_at))
+                                                                <form action="{{ ($isAdmin || $isEditor || $isManager) ? route('alerts.read', $alert) : route('client.alerts.read', $alert) }}" method="POST">
+                                                                    @csrf
+                                                                    <button type="submit" class="btn btn-sm btn-outline-secondary px-2 py-0">
+                                                                        <i class="fas fa-check"></i> Marquer comme lu
+                                                                    </button>
+                                                                </form>
+                                                            @endif
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div class="flex-grow-1">
-                                                <div class="{{ is_null($alert->read_at) ? 'fw-bold' : '' }}">{{ Str::limit($alert->message, 50) }}</div>
-                                                <small class="text-muted">{{ $alert->created_at->diffForHumans() }}</small>
-                                            </div>
-                                            @if(is_null($alert->read_at))
-                                                <form action="{{ route('alerts.read', $alert) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-sm btn-link text-decoration-none p-0">
-                                                        <i class="fas fa-check text-muted"></i>
-                                                    </button>
-                                                </form>
-                                            @endif
-                                        </div>
-                                    @endforeach
+                                        @endforeach
+                                    </div>
                                 @endif
                                 
-                                <div class="dropdown-item text-center border-top">
-                                    <a href="{{ route('alerts.index') }}" class="btn btn-link text-decoration-none">Voir toutes les alertes</a>
+                                <div class="p-3 text-center border-top">
+                                    <a href="{{ $alertsRoute }}" class="btn btn-primary btn-sm w-100">
+                                        <i class="fas fa-bell me-1"></i> Voir toutes les alertes
+                                    </a>
                                 </div>
                             </div>
                         </div>

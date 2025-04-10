@@ -55,6 +55,7 @@ Route::middleware(['auth'])->prefix('client')->name('client.')->group(function (
     Route::delete('/cart/{cart}', [CartController::class, 'remove'])->name('cart.remove');
     Route::post('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
     Route::get('/cart/checkout', [CartController::class, 'checkout'])->name('cart.checkout');
+    Route::post('/cart/pay-with-tokens', [CartController::class, 'payWithTokens'])->name('cart.pay-with-tokens');
     Route::post('/cart/apply-discount', [CartController::class, 'applyDiscount'])->name('cart.apply-discount');
     Route::get('/cart/remove-discount', [CartController::class, 'removeDiscount'])->name('cart.remove-discount');
     
@@ -86,6 +87,19 @@ Route::middleware(['auth'])->prefix('client')->name('client.')->group(function (
     // Routes pour réclamer des codes cadeaux
     Route::get('/tokens/claim', [TokenDiscountController::class, 'showClaimForm'])->name('tokens.claim');
     Route::post('/tokens/claim', [TokenDiscountController::class, 'claimGiftCode'])->name('tokens.claim.process');
+
+    // Routes pour les alertes
+    Route::get('/alertes', [AlertController::class, 'index'])->name('alerts.index');
+    Route::post('/alertes/{alert}/read', [AlertController::class, 'markAsRead'])->name('alerts.read');
+    Route::post('/alertes/read-all', [AlertController::class, 'markAllAsRead'])->name('alerts.readAll');
+    
+    // Routes détaillées pour les commandes
+    Route::get('/orders', [ClientController::class, 'orders'])->name('orders');
+    Route::get('/orders/{order}', [ClientController::class, 'orderDetails'])->name('orders.details');
+    Route::get('/orders/{order}/confirm-address', [ClientController::class, 'confirmAddressForm'])->name('orders.confirm-address');
+    Route::post('/orders/{order}/confirm-address', [ClientController::class, 'confirmAddress'])->name('orders.confirm-address.store');
+    Route::get('/orders/{order}/refund', [ClientController::class, 'refundForm'])->name('orders.refund');
+    Route::post('/orders/{order}/refund', [ClientController::class, 'requestRefund'])->name('orders.refund.request');
 });
 
 // Route publique pour accéder à une liste partagée
@@ -95,31 +109,45 @@ Route::post('liste-cadeaux/{code}/reserve/{itemId}', [GiftListController::class,
 // Route pour la page de compte restreint (accessible sans être authentifié)
 Route::get('/compte-restreint', [RestrictedController::class, 'index'])->name('restricted.account');
 
-// Routes pour les alertes
-Route::middleware(['auth'])->group(function () {
-    Route::get('/alertes', [AlertController::class, 'index'])->name('alerts.index');
-    Route::post('/alertes/{alert}/read', [AlertController::class, 'markAsRead'])->name('alerts.read');
-    Route::post('/alertes/read-all', [AlertController::class, 'markAllAsRead'])->name('alerts.readAll');
-});
-
 // Routes pour l'admin, le gestionnaire et l'éditeur
 Route::middleware(['auth'])->group(function () {
     // Afficher le dashboard approprié selon le rôle
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Routes accessibles aux éditeurs, gestionnaires et admins
+    // Routes pour les alertes admin/éditeur/gestionnaire
+    Route::get('/dashboard/alertes', [AlertController::class, 'index'])->name('alerts.index');
+    Route::post('/dashboard/alertes/{alert}/read', [AlertController::class, 'markAsRead'])->name('alerts.read');
+    Route::post('/dashboard/alertes/read-all', [AlertController::class, 'markAllAsRead'])->name('alerts.readAll');
+    
+    // IMPORTANT: Routes statiques d'abord, routes avec paramètres ensuite
+    
+    // Routes spécifiques aux managers et admins - AVANT les routes avec paramètres
+    Route::middleware(['can:is-manager'])->group(function () {
+        Route::get('/books/create', [BookController::class, 'create'])->name('books.create');
+        Route::post('/books', [BookController::class, 'store'])->name('books.store');
+    });
+    
+    // Routes communes à tous les rôles ayant accès aux livres
     Route::middleware(['can:is-editor'])->group(function () {
-        Route::resource('books', BookController::class)->only(['index', 'show', 'edit', 'update']);
+        Route::get('/books', [BookController::class, 'index'])->name('books.index');
+        
+        // Routes avec paramètres - APRÈS les routes statiques
+        Route::get('/books/{book}', [BookController::class, 'show'])->name('books.show');
+        Route::get('/books/{book}/edit', [BookController::class, 'edit'])->name('books.edit');
+        Route::put('/books/{book}', [BookController::class, 'update'])->name('books.update');
+        Route::patch('/books/{book}', [BookController::class, 'update']);
+        
+        // Autres ressources accessibles aux éditeurs
         Route::resource('categories', CategoryController::class);
         Route::resource('comments', CommentController::class);
     });
     
-    // Routes accessibles aux gestionnaires et admins
+    // Route de suppression - accessible seulement aux managers et admins
     Route::middleware(['can:is-manager'])->group(function () {
-        Route::resource('books', BookController::class)->except(['index', 'show', 'edit', 'update']);
+        Route::delete('/books/{book}', [BookController::class, 'destroy'])->name('books.destroy');
         Route::resource('sales', SaleController::class);
     });
-    
+
     // Routes accessibles aux admins uniquement
     Route::middleware(['can:is-admin'])->group(function () {
         Route::resource('users', UserController::class);
@@ -136,6 +164,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/users/{user}/unrestrict', [UserController::class, 'unrestrict'])->name('users.unrestrict');
         Route::get('/alerts/create', [AlertController::class, 'create'])->name('alerts.create');
         Route::post('/alerts', [AlertController::class, 'store'])->name('alerts.store');
+
+        // Gestion des remboursements
+        Route::prefix('admin/refunds')->name('admin.refunds.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\RefundController::class, 'index'])->name('index');
+            Route::get('/{order}', [App\Http\Controllers\Admin\RefundController::class, 'show'])->name('show');
+            Route::post('/{order}/approve', [App\Http\Controllers\Admin\RefundController::class, 'approve'])->name('approve');
+            Route::post('/{order}/reject', [App\Http\Controllers\Admin\RefundController::class, 'reject'])->name('reject');
+        });
     });
 });
 

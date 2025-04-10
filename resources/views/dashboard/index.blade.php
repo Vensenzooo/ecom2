@@ -156,6 +156,22 @@
                 </div>
             </div>
         </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card card-dashboard border-left-danger h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Remboursements en attente</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ $pendingRefunds }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-undo-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Actions rapides spécifiques au rôle -->
@@ -433,6 +449,86 @@
                                 @endif
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tableau des remboursements récents -->
+    <div class="row">
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card card-dashboard">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">Remboursements récents</h6>
+                    @can('is-admin')
+                    <a href="{{ route('admin.refunds.index') }}" class="btn btn-sm btn-danger">
+                        <i class="fas fa-list me-1"></i>Gérer les remboursements
+                    </a>
+                    @endcan
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Client</th>
+                                    <th>Montant</th>
+                                    <th>Statut</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if(isset($recentRefunds) && $recentRefunds->count() > 0)
+                                    @foreach($recentRefunds as $refund)
+                                    <tr>
+                                        <td>{{ $refund->user->name }}</td>
+                                        <td>
+                                            @if($refund->mode_paiement === 'tokens')
+                                                @php
+                                                    $details = json_decode($refund->details_paiement, true);
+                                                    $tokens = $details['tokens_used'] ?? 0;
+                                                @endphp
+                                                {{ number_format($tokens) }} tokens
+                                            @else
+                                                {{ number_format($refund->montant_total, 2) }} €
+                                            @endif
+                                        </td>
+                                        <td>
+                                            <span class="badge {{ $refund->statut === 'refund_requested' ? 'bg-warning' : 'bg-info' }}">
+                                                {{ $refund->statut === 'refund_requested' ? 'En attente' : 'Remboursé' }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if($refund->refund_requested_at)
+                                                {{ \Carbon\Carbon::parse($refund->refund_requested_at)->format('d/m/Y') }}
+                                            @else
+                                                {{ \Carbon\Carbon::parse($refund->created_at)->format('d/m/Y') }}
+                                            @endif
+                                        </td>
+                                    </tr>
+                                    @endforeach
+                                @else
+                                    <tr>
+                                        <td colspan="4" class="text-center">Aucun remboursement récent</td>
+                                    </tr>
+                                @endif
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphique comparatif remboursements/ventes -->
+        <div class="col-xl-6 col-lg-6 mb-4">
+            <div class="card card-dashboard">
+                <div class="card-header">
+                    <h6 class="m-0 font-weight-bold text-primary">Remboursements mensuels</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="refundsChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -957,6 +1053,49 @@
             });
             console.log("Graphique admin initialisé avec succès");
         }
+
+        // Graphique des remboursements mensuels
+        if (document.getElementById('refundsChart')) {
+            try {
+                const refundsData = JSON.parse(document.getElementById('refunds-data')?.textContent || '{}');
+                
+                if (refundsData.labels && refundsData.values) {
+                    const ctx = document.getElementById('refundsChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: refundsData.labels,
+                            datasets: [{
+                                label: 'Remboursements (€)',
+                                data: refundsData.values,
+                                backgroundColor: 'rgba(231, 74, 59, 0.05)',
+                                borderColor: 'rgba(231, 74, 59, 1)',
+                                pointBackgroundColor: 'rgba(231, 74, 59, 1)',
+                                pointBorderColor: '#fff',
+                                borderWidth: 2,
+                                tension: 0.3
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: function(value) {
+                                            return value + ' €';
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error("Erreur lors de l'initialisation du graphique des remboursements:", e);
+            }
+        }
     });
 </script>
 
@@ -990,6 +1129,10 @@
     
     @if(isset($salesByCategoryData))
     <div id="sales-by-category-data">{{ json_encode($salesByCategoryData) }}</div>
+    @endif
+
+    @if(isset($refundsData))
+    <div id="refunds-data">{{ json_encode($refundsData) }}</div>
     @endif
 </div>
 @endsection

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.client')
 
 @section('title', 'Mes alertes')
 
@@ -19,6 +19,17 @@
             @endif
         </div>
     </div>
+
+    @if($unreadAlerts->count() > 0)
+        <div class="text-end mb-3">
+            <form action="{{ route('client.alerts.readAll') }}" method="POST" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-check-double me-1"></i> Tout marquer comme lu
+                </button>
+            </form>
+        </div>
+    @endif
 
     <div class="row">
         <div class="col-12">
@@ -57,6 +68,23 @@
                         </div>
                     @endforeach
                 </div>
+
+                @foreach($unreadAlerts as $alert)
+                    <div class="card mb-3 border-left-{{ $alert->type }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="card-title fw-bold">{{ \Illuminate\Support\Str::limit($alert->message, 100) }}</h6>
+                                <form action="{{ route('client.alerts.read', $alert) }}" method="POST">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                            </div>
+                            <p class="card-text text-muted small">{{ $alert->created_at->diffForHumans() }}</p>
+                        </div>
+                    </div>
+                @endforeach
                 
                 <div class="d-flex justify-content-center mt-4">
                     {{ $alerts->links() }}

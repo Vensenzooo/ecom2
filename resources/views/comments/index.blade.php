@@ -118,7 +118,7 @@
                 <select name="category_id" id="category_id" class="form-select">
                     <option value="">Toutes les catégories</option>
                     @foreach($categories ?? [] as $category)
-                        <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>{{ $category->nom }}</option>
+                        <option value="{{ $category->id }}" {{ request('category_id') == $category-> id? 'selected' : '' }}>{{ $category->nom }}</option>
                     @endforeach
                 </select>
             </div>

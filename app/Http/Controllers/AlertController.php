@@ -6,6 +6,7 @@ use App\Models\Alert;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AlertController extends Controller
 {
@@ -14,11 +15,32 @@ class AlertController extends Controller
      */
     public function index()
     {
-        $alerts = Alert::where('user_id', Auth::id())
+        // Get the user explicitly using the User model
+        $user = User::find(Auth::id());
+        
+        // Get all alerts
+        $alerts = $user->alerts()
             ->orderBy('created_at', 'desc')
             ->paginate(10);
-            
-        return view('alerts.index', compact('alerts'));
+
+        // Get unread alerts separately
+        $unreadAlerts = $user->alerts()
+            ->whereNull('read_at')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        
+        // Determine if we are in admin mode
+        $isAdmin = $user->roles()->where('nom', 'admin')->exists();
+        $isEditor = $user->roles()->where('nom', 'editeur')->exists();
+        $isManager = $user->roles()->where('nom', 'gestionnaire')->exists();
+        
+        if ($isAdmin || $isEditor || $isManager) {
+            // Admin/Editor/Manager view
+            return view('alerts.admin.index', compact('alerts', 'unreadAlerts'));
+        } else {
+            // Client view
+            return view('alerts.index', compact('alerts', 'unreadAlerts'));
+        }
     }
 
     /**
@@ -57,14 +79,15 @@ class AlertController extends Controller
      */
     public function markAsRead(Alert $alert)
     {
-        // Vérifier que l'utilisateur connecté est bien le destinataire de l'alerte
-        if (Auth::id() != $alert->user_id) {
-            abort(403);
+        // Vérifier que l'utilisateur actuel est bien le destinataire de l'alerte
+        if ($alert->user_id !== Auth::id()) {
+            abort(403, "Vous n'êtes pas autorisé à effectuer cette action");
         }
         
         $alert->update(['read_at' => now()]);
         
-        return redirect()->back()->with('success', 'Alerte marquée comme lue');
+        return redirect()->route('client.alerts.index')
+            ->with('success', 'Alerte marquée comme lue');
     }
 
     /**
@@ -72,10 +95,12 @@ class AlertController extends Controller
      */
     public function markAllAsRead()
     {
-        Alert::where('user_id', Auth::id())
+        $user = User::find(Auth::id());
+        $user->alerts()
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
-            
-        return redirect()->back()->with('success', 'Toutes les alertes ont été marquées comme lues');
+        
+        return redirect()->route('client.alerts.index')
+            ->with('success', 'Toutes les alertes ont été marquées comme lues');
     }
 }

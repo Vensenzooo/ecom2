@@ -99,17 +99,18 @@ class ProfileController extends Controller
      */
     public function updateTheme(Request $request)
     {
-        $user = Auth::user();
-
         $validated = $request->validate([
             'theme' => 'required|string|in:light,dark,auto',
         ]);
 
         // Stocker la préférence de thème dans la session
         session(['theme' => $validated['theme']]);
-
-        // Si vous avez une table pour les préférences utilisateur, vous pouvez l'utiliser ici
-        // UserPreference::updateOrCreate(['user_id' => $user->id], ['theme' => $validated['theme']]);
+        
+        // Log the theme change for debugging
+        \Illuminate\Support\Facades\Log::info('Theme changed', [
+            'user' => Auth::id(),
+            'theme' => $validated['theme']
+        ]);
 
         return redirect()->route('profile.show')
             ->with('success', 'Votre thème d\'affichage a été modifié avec succès.');

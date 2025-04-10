@@ -42,13 +42,19 @@ class BookController extends Controller
             'description' => 'required|string',
             'auteur' => 'required|string|max:255',
             'categorie_id' => 'required|exists:categories,id',
-            'niveau_expertise' => 'required|string|max:255',
+            'niveau_expertise' => 'required|string',
             'stock' => 'required|integer|min:0',
             'prix' => 'required|numeric|min:0',
+            'image_url' => 'nullable|string|max:255',
         ]);
-
-        Book::create($validated);
-
+        
+        // Set a default image URL if none is provided
+        if (!isset($validated['image_url'])) {
+            $validated['image_url'] = '/images/default-book.jpg'; // Default placeholder image
+        }
+        
+        $book = Book::create($validated);
+        
         return redirect()->route('books.index')
             ->with('success', 'Livre créé avec succès.');
     }

@@ -136,22 +136,22 @@ class TokenDiscountController extends Controller
             [
                 'id' => 'basic',
                 'name' => 'Pack Basic',
-                'tokens' => 1000,
-                'price' => 5.99,
+                'tokens' => 2000,
+                'price' => 6.00,
                 'description' => 'Pour obtenir une réduction de 10%'
             ],
             [
                 'id' => 'standard',
                 'name' => 'Pack Standard',
-                'tokens' => 2500,
-                'price' => 12.99,
+                'tokens' => 5000,
+                'price' => 15.00,
                 'description' => 'Économisez et obtenez une réduction de 25%'
             ],
             [
                 'id' => 'premium',
                 'name' => 'Pack Premium',
-                'tokens' => 5000,
-                'price' => 23.00,
+                'tokens' => 10000,
+                'price' => 30.00,
                 'description' => 'Notre meilleure offre! Réduction de 50% pour vous ou un ami'
             ]
         ];

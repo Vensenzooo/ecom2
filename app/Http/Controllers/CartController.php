@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Cart;
 use App\Models\Book;
+use App\Models\User;
+use App\Models\Sale;
+use App\Models\Order;
+use App\Models\Alert;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -165,35 +169,129 @@ class CartController extends Controller
     }
 
     /**
-     * Passer à la page de paiement
+     * Afficher la page checkout
      */
     public function checkout()
     {
-        // Get cart items
-        $user = Auth::user();
-        $cartItems = Cart::where('user_id', $user->id)
+        $cartItems = Cart::where('user_id', Auth::id())
             ->with('book')
             ->get();
         
-        // Calculate subtotal
-        $subtotal = $cartItems->sum(function($item) {
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('client.cart.index')
+                ->with('error', 'Votre panier est vide');
+        }
+        
+        $total = $cartItems->sum(function($item) {
             return $item->book->prix * $item->quantity;
         });
         
-        // Apply the discount if applicable
-        $total = $subtotal;
-        if (session('discount_percentage')) {
-            $discountAmount = $subtotal * (session('discount_percentage') / 100);
-            $total = $subtotal - $discountAmount;
+        // Calculer la réduction si un code est appliqué
+        $subtotal = $total;
+        $discountPercentage = session('discount_percentage', 0);
+        if ($discountPercentage > 0) {
+            $total = $subtotal * (1 - $discountPercentage / 100);
         }
         
-        // Store the cart items and total in the session for PayPal
-        session([
-            'paypal_items' => $cartItems,
-            'paypal_total' => $total,
-            'paypal_subtotal' => $subtotal
+        // Tokens disponibles de l'utilisateur
+        $userTokens = Auth::user()->tokens;
+        
+        // Calculer le coût en tokens (3 tokens = 0.01€)
+        $tokenCost = ceil($total * 100 * 3); // 10000 tokens = 30€, donc 3 tokens = 0.01€
+        $canUseTokens = $userTokens >= $tokenCost;
+        
+        return view('cart.checkout', compact('cartItems', 'total', 'subtotal', 'discountPercentage', 'userTokens', 'tokenCost', 'canUseTokens'));
+    }
+
+    /**
+     * Traiter le paiement avec des tokens
+     */
+    public function payWithTokens()
+    {
+        $cartItems = Cart::where('user_id', Auth::id())
+            ->with('book')
+            ->get();
+        
+        if ($cartItems->isEmpty()) {
+            return redirect()->route('client.cart.index')
+                ->with('error', 'Votre panier est vide');
+        }
+        
+        $total = $cartItems->sum(function($item) {
+            return $item->book->prix * $item->quantity;
+        });
+        
+        // Appliquer la réduction si un code est appliqué
+        $discountPercentage = session('discount_percentage', 0);
+        if ($discountPercentage > 0) {
+            $total = $total * (1 - $discountPercentage / 100);
+        }
+        
+        // Calculer le coût en tokens
+        $tokenCost = ceil($total * 100 * 3); // 10000 tokens = 30€, donc 3 tokens = 0.01€
+        
+        $user = User::find(Auth::id());
+        
+        if ($user->tokens < $tokenCost) {
+            return redirect()->route('client.cart.checkout')
+                ->with('error', "Vous n'avez pas assez de tokens pour effectuer cet achat");
+        }
+        
+        // Déduire les tokens de l'utilisateur
+        $user->tokens -= $tokenCost;
+        $user->save();
+        
+        // Créer la commande et traiter les achats
+        foreach ($cartItems as $item) {
+            $book = Book::find($item->book_id);
+            
+            // Vérifier le stock
+            if ($book->stock < $item->quantity) {
+                return redirect()->route('client.cart.checkout')
+                    ->with('error', "Stock insuffisant pour {$book->titre}. Votre transaction n'a pas été traitée.");
+            }
+            
+            // Créer la vente
+            Sale::create([
+                'book_id' => $item->book_id,
+                'quantité' => $item->quantity,
+                'prix_unitaire' => $book->prix,
+                'date_vente' => now(),
+                'payment_method' => 'tokens',
+            ]);
+            
+            // Mettre à jour le stock
+            $book->stock -= $item->quantity;
+            $book->save();
+        }
+        
+        // Créer une entrée dans la table des commandes
+        if (class_exists('App\Models\Order')) {
+            Order::create([
+                'user_id' => Auth::id(),
+                'transaction_id' => 'TOKEN-' . uniqid(),
+                'montant_total' => $total,
+                'statut' => 'completed',
+                'mode_paiement' => 'tokens',
+                'details_paiement' => json_encode(['tokens_used' => $tokenCost]),
+            ]);
+        }
+        
+        // Créer une alerte pour informer l'utilisateur
+        Alert::create([
+            'user_id' => Auth::id(),
+            'message' => "Vous avez utilisé {$tokenCost} tokens pour acheter des livres",
+            'type' => 'info',
+            'created_by' => Auth::id(), // Ajouter le champ created_by
         ]);
         
-        return view('cart.checkout', compact('cartItems', 'subtotal', 'total'));
+        // Vider le panier
+        Cart::where('user_id', Auth::id())->delete();
+        
+        // Nettoyer la session
+        session()->forget(['discount_code', 'discount_percentage']);
+        
+        return redirect()->route('client.orders')
+            ->with('success', "Paiement réussi avec {$tokenCost} tokens! Votre commande a été traitée.");
     }
 }

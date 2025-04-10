@@ -4,9 +4,10 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Order;
 use App\Models\Book;
 
-class Sale extends Model
+class OrderItem extends Model
 {
     use HasFactory;
 
@@ -16,26 +17,24 @@ class Sale extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'order_id',
         'book_id',
-        'quantité',
+        'quantite',
         'prix_unitaire',
-        'date_vente',
-        'payment_method', // Ajout du champ pour le mode de paiement
-        'transaction_id'
     ];
 
     /**
-     * The attributes that should be cast.
+     * Get the order that owns the order item.
      *
-     * @var array<string, string>
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    protected $casts = [
-        'date_vente' => 'datetime',
-        'prix_unitaire' => 'float',
-    ];
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
 
     /**
-     * Get the book that owns the sale.
+     * Get the book associated with the order item.
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
