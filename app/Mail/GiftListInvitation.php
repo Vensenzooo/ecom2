@@ -6,53 +6,35 @@ use App\Models\GiftList;
 use App\Models\FriendInvitation;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 class GiftListInvitation extends Mailable
 {
     use Queueable, SerializesModels;
 
+    public $giftList;
+    public $invitation;
+    public $user;
+    public $messageContent;  // Changed from $message to $messageContent to avoid confusion
+
     /**
      * Create a new message instance.
      */
-    public function __construct(
-        public GiftList $giftList,
-        public FriendInvitation $invitation,
-        public User $user,
-        public ?string $message = null
-    ) {}
-
-    /**
-     * Get the message envelope.
-     */
-    public function envelope(): Envelope
+    public function __construct(GiftList $giftList, FriendInvitation $invitation, User $user, $message = null)
     {
-        return new Envelope(
-            subject: "{$this->user->name} vous invite à consulter sa liste de cadeaux",
-        );
+        $this->giftList = $giftList;
+        $this->invitation = $invitation;
+        $this->user = $user;
+        $this->messageContent = $message;  // Store the message as messageContent
     }
 
     /**
-     * Get the message content definition.
+     * Build the message.
      */
-    public function content(): Content
+    public function build()
     {
-        return new Content(
-            view: 'emails.gift-list-invitation',
-        );
-    }
-
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
-    public function attachments(): array
-    {
-        return [];
+        return $this->subject('Vous avez été invité à voir une liste de cadeaux')
+                   ->view('emails.gift-list-invitation');
     }
 }

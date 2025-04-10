@@ -58,7 +58,9 @@
             
             @if($message)
                 <p><strong>Message de {{ $user->name }} :</strong></p>
-                <p>{{ $message }}</p>
+                @if(isset($messageContent))
+                    <p>{{ $messageContent }}</p>
+                @endif
             @endif
             
             <p>Cette liste contient des idées de cadeaux que {{ $user->name }} aimerait recevoir.</p>

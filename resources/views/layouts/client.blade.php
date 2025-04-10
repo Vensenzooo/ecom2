@@ -227,9 +227,9 @@
 
         @yield('content')
 
-    <!-- Footer - Hide on specific pages -->
-    @if(!Request::is('profile') && !Request::is('/') && !Request::is('client/tokens*') && !Request::is('client/catalog*') && !Request::is('client/orders*') && !Request::is('liste-cadeaux*'))
-    <footer class="bg-dark text-white py-4 mt-5">
+    <!-- Footer Section -->
+    @if(!Request::is('client/*') || Request::is('/'))
+    <footer class="bg-dark text-white py-4 mt-auto">
         <div class="container">
             <div class="row">
                 <div class="col-md-4 mb-4 mb-md-0">

@@ -1,4 +1,4 @@
-@extends('layouts.client')
+@extends('layouts.client', ['hideFooter' => true])
 
 @section('title', 'Mon panier')
 
