@@ -1,0 +1,92 @@
+/* Styles de base pour le thème sombre */
+body {
+    background-color: #121212;
+    color: #e0e0e0;
+}
+
+.card {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border-color: #444;
+}
+
+.card-header {
+    background-color: #1e1e1e;
+    border-bottom: 1px solid #333;
+}
+
+.table {
+    color: #e0e0e0;
+}
+
+.table-bordered {
+    border-color: #444;
+}
+
+.table-bordered td,
+.table-bordered th {
+    border-color: #444;
+}
+
+.navbar {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0;
+}
+
+.dropdown-menu {
+    background-color: #2d2d2d;
+    border-color: #444;
+}
+
+.dropdown-item {
+    color: #e0e0e0;
+}
+
+.dropdown-item:hover {
+    background-color: #3d3d3d;
+    color: #ffffff;
+}
+
+.form-control, .form-select {
+    background-color: #2d2d2d;
+    border-color: #444;
+    color: #e0e0e0;
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: #3d3d3d;
+    color: #ffffff;
+}
+
+.btn-outline-secondary {
+    color: #e0e0e0;
+    border-color: #666;
+}
+
+.btn-outline-secondary:hover {
+    background-color: #666;
+    color: white;
+}
+
+.modal-content {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+.text-muted {
+    color: #aaaaaa !important;
+}
+
+.bg-light {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0;
+}
+
+/* Corriger les ombres des cartes pour le thème sombre */
+.card-dashboard {
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(0, 0, 0, 0.4);
+}
+
+.card-dashboard:hover {
+    box-shadow: 0 0.5rem 2rem 0 rgba(0, 0, 0, 0.5);
+}

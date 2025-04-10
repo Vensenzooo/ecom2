@@ -1,0 +1,44 @@
+/* Styles généraux */
+.pagination {
+    margin-top: 2rem;
+}
+
+/* Uniformiser les boutons de pagination */
+.pagination .page-link {
+    font-size: 0.9rem;
+    padding: 0.375rem 0.75rem;
+    height: 38px;
+    width: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Réduire spécifiquement la taille des flèches de pagination */
+.pagination .page-item:first-child .page-link svg,
+.pagination .page-item:last-child .page-link svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Appliquer la même taille de police pour les chevrons et les chiffres */
+.pagination .page-item:first-child .page-link,
+.pagination .page-item:last-child .page-link {
+    font-size: 0.9rem;
+}
+
+/* Styles pour les flèches au format texte comme "« »" */
+.pagination .page-item:first-child .page-link,
+.pagination .page-item:last-child .page-link,
+.pagination li:first-child .page-link,
+.pagination li:last-child .page-link {
+    font-size: 0.9rem !important;
+    transform: scale(0.9);
+}
+
+/* Uniformiser les espaces autour de la pagination */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0;
+}

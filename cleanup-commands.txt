@@ -1,0 +1,7 @@
+# Exécutez ces commandes dans votre PowerShell pour nettoyer les migrations dupliquées
+Remove-Item -Path "database/migrations/create_books_table.php" -ErrorAction SilentlyContinue
+Remove-Item -Path "database/migrations/create_categories_table.php" -ErrorAction SilentlyContinue
+Remove-Item -Path "database/migrations/create_comments_table.php" -ErrorAction SilentlyContinue
+Remove-Item -Path "database/migrations/create_roles_table.php" -ErrorAction SilentlyContinue
+Remove-Item -Path "database/migrations/create_sales_table.php" -ErrorAction SilentlyContinue
+Remove-Item -Path "database/migrations/create_user_role_table.php" -ErrorAction SilentlyContinue

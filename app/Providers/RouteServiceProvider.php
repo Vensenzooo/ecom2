@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
+use App\Models\User;
+
+class RouteServiceProvider extends ServiceProvider
+{
+    /**
+     * The path to your application's "home" route.
+     * Typically, users are redirected here after authentication.
+     */
+    public const HOME = '/dashboard';
+
+    /**
+     * Define your route model bindings, pattern filters, and other route configuration.
+     */
+    public function boot(): void
+    {
+        RateLimiter::for('api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        $this->routes(function () {
+            Route::middleware('api')
+                ->prefix('api')
+                ->group(base_path('routes/api.php'));
+
+            Route::middleware('web')
+                ->group(base_path('routes/web.php'));
+        });
+    }
+    
+    /**
+     * Determine where to redirect users after authentication.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\User|null  $user
+     * @return string
+     */
+    public static function redirectTo(Request $request, ?User $user = null): string
+    {
+        // Si nous n'avons pas d'utilisateur, utiliser la page par défaut
+        if (!$user) {
+            return static::HOME;
+        }
+        
+        // Rediriger en fonction du rôle de l'utilisateur
+        if ($user->roles()->where('nom', 'admin')->exists() ||
+            $user->roles()->where('nom', 'gestionnaire')->exists() ||
+            $user->roles()->where('nom', 'editeur')->exists()) {
+            return '/dashboard';
+        }
+        
+        // Si c'est un client ou un autre rôle non administratif
+        return '/client/dashboard';
+    }
+}
